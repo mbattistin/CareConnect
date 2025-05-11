@@ -5,7 +5,7 @@
 session_start();
 
 // You can set a variable here to highlight the current page in your nav
-$currentPage = 'home';
+$currentPage = 'Home';
 
 ?>
 <!DOCTYPE html>
