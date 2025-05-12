@@ -8,24 +8,40 @@
       <li class="nav-item active">
         <a class="nav-link" href="index.php">Home</a>
       </li>
-      <li class="nav-item">
-        <a class="nav-link" href="appointments.php">Appointments</a>
-      </li>
-      <li class="nav-item dropdown">
-        <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-          Management
-        </a>
-        <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-          <a class="dropdown-item" href="#">Appointments</a>
-          <a class="dropdown-item" href="#">Doctors</a>
-          <a class="dropdown-item" href="#">Users</a>
-        </div>
-      </li>
+      <?php if (isset($_SESSION['role']) && ($_SESSION['role'] === 'user' || $_SESSION['role'] === 'doctor')) : ?>
+        <li class="nav-item">
+          <a class="nav-link" href="appointments.php">Appointments</a>
+        </li>
+      <?php endif; ?>
+      <?php if (isset($_SESSION['role']) && $_SESSION['role'] === 'admin') : ?>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+            Management
+          </a>
+          <div class="dropdown-menu" aria-labelledby="navbarDropdown">
+            <a class="dropdown-item" href="#">Appointments</a>
+            <a class="dropdown-item" href="#">Doctors</a>
+            <a class="dropdown-item" href="#">Users</a>
+          </div>
+        </li>
+      <?php endif; ?>
     </ul>
     <ul class="navbar-nav ml-auto">
-        <li class="nav-item">
-            <a class="nav-link" href="signIn.php">Sign in</a>
+      <?php if (isset($_SESSION['username'])) : ?>
+        <li class="nav-item dropdown">
+          <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button" data-toggle="dropdown"
+            aria-haspopup="true" aria-expanded="false">
+            <?php echo htmlspecialchars($_SESSION['username']); ?>
+          </a>
+          <div class="dropdown-menu dropdown-menu-right" aria-labelledby="userDropdown">
+            <a class="dropdown-item" href="databaseConnection.php?action=userLogOut">Sign out</a>
+          </div>
         </li>
+      <?php else : ?>
+        <li class="nav-item">
+          <a class="nav-link" href="signIn.php">Sign in</a>
+        </li>
+      <?php endif; ?>
     </ul>
   </div>
 </nav>

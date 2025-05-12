@@ -15,7 +15,17 @@ $conn = getDatabaseConnection();
 
 if ($action == 'insertUserFromRegisterForm') {
     insertUserFromRegisterForm($conn, $_POST);
-} else {
+}
+else if($action == 'userLogin'){
+    userLogin($conn, $_POST);
+}
+else if($action == 'userLogOut'){
+    session_unset();
+    session_destroy();
+    header("Location: signIn.php");
+    exit;
+} 
+else {
     echo "No valid action provided.";
 }
 
@@ -85,19 +95,49 @@ function insertUserFromRegisterForm($conn, $data) {
             VALUES ('$name', '$email', '$phone', '$password')";
 
     if ($conn->query($sql)) {
-        //header("Location: login.php?registration_success_message");
-
-        //apply on the login page
-        // if (isset($_GET['success'])) {
-        //     echo "<div class='alert alert-success'>Registration successful. Please log in.</div>";
-        // }
+        header("Location: signIn.php?registration_success_message");
         exit();
     } else {
         
-        // after successful registration
+        // after error registration
         $_SESSION['registration_error_message'] = "Something went wrong during registration. Please try again later.";
         header("Location: register.php");
         exit();    
+    }
+}
+
+//login
+function userLogin($conn, $data) {
+    $email = $conn->real_escape_string($data['email']);
+    $password = $data['password']; // use raw password input
+    
+    // Check if user exists in the database
+    $sql = "SELECT * FROM users WHERE email = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    
+    // If user found, verify password
+    if ($result->num_rows === 1) {
+      $user = $result->fetch_assoc();
+    
+      if (password_verify($password, $user['password'])) {
+        $_SESSION['username'] = $user['full_name'];
+        $_SESSION['role'] = $user['role'];
+        $_SESSION['user_id'] = $user['id'];
+    
+        header("Location: index.php");
+        exit;
+      } else {
+        $_SESSION['login_error_message'] = "Invalid credentials. Please try again.";
+        header("Location: signIn.php");
+        exit(); 
+      }
+    } else {
+        $_SESSION['login_error_message'] = "User not found. Please register before attempting to log in.";
+        header("Location: signIn.php");
+        exit(); 
     }
 }
 ?>
