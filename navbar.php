@@ -21,7 +21,7 @@
           <div class="dropdown-menu" aria-labelledby="navbarDropdown">
             <a class="dropdown-item" href="#">Appointments</a>
             <a class="dropdown-item" href="#">Doctors</a>
-            <a class="dropdown-item" href="#">Users</a>
+            <a class="dropdown-item" href="usersManagement.php">Users</a>
           </div>
         </li>
       <?php endif; ?>

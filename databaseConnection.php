@@ -19,14 +19,17 @@ if ($action == 'insertUserFromRegisterForm') {
 else if($action == 'userLogin'){
     userLogin($conn, $_POST);
 }
+else if($action == 'insertEditUser'){
+    insertEditUser($conn, $_POST);
+}
 else if($action == 'userLogOut'){
     session_unset();
     session_destroy();
     header("Location: signIn.php");
     exit;
-} 
+}
 else {
-    echo "No valid action provided.";
+    
 }
 
 // Function to connect and create DB/table if needed
@@ -140,4 +143,59 @@ function userLogin($conn, $data) {
         exit(); 
     }
 }
+
+function getAllUsers() {
+    $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
+    }
+
+    $users = [];
+    $stmt = $conn->prepare("SELECT id, full_name, email, phone_number, role FROM users ORDER BY full_name ASC");
+
+    if ($stmt) {
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        while ($row = $result->fetch_assoc()) {
+            $users[] = $row;
+        }
+
+        $stmt->close();
+    }
+
+    $conn->close();
+    return $users;
+    }
+
+    function insertEditUser($conn, $data) {
+        $userId = $id = isset($data['user_id']) ? intval($data['user_id']) : 0; 
+        $name = $conn->real_escape_string($data['name']);
+        $email = $conn->real_escape_string($data['email']);
+        $phone = $conn->real_escape_string($data['phone']);
+        $password = password_hash($data['password'], PASSWORD_DEFAULT);
+        $role = $conn->real_escape_string($data['role']);
+
+        if ($id > 0) {
+            // Update existing user
+            $sql = "UPDATE users SET full_name='$name', email='$email', phone_number='$phone', role='$role'";
+            if (!empty($password)) {
+                $sql .= ", password='$password'";
+            }
+            $sql .= " WHERE id=$id";
+        } else {
+            // Create new user
+            $sql = "INSERT INTO users (full_name, email, phone_number, password, role)
+                    VALUES ('$name', '$email', '$phone', '$password', '$role')";
+        }
+
+        if ($conn->query($sql)) {
+            header("Location: usersManagement.php?success=1");
+            exit();
+        } else {
+            echo "Error: " . $conn->error;
+        }
+    }
+
 ?>
