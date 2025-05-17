@@ -19,8 +19,7 @@
             Management
           </a>
           <div class="dropdown-menu" aria-labelledby="navbarDropdown">
-            <a class="dropdown-item" href="#">Appointments</a>
-            <a class="dropdown-item" href="#">Doctors</a>
+            <a class="dropdown-item" href="appointments.php">Appointments</a>
             <a class="dropdown-item" href="usersManagement.php">Users</a>
           </div>
         </li>

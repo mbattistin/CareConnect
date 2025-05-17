@@ -23,8 +23,8 @@ $currentPage = 'User Management';
     <!-- navbar section -->
     <?php include 'navbar.php'; ?>
     
-    <h2 class="text-center">Users Management</h2>
     <main class="container mt-5">
+        <h2 class="text-center">Users Management</h2>
         <?php if (!empty($message)) : ?>
             <div class="alert alert-info"><?php echo htmlspecialchars($message); ?></div>
         <?php endif; ?>
@@ -54,16 +54,16 @@ $currentPage = 'User Management';
             </div>
             <div class="form-row">
                 <div class="col">
-                    <input type="text" name="name" id="name" class="form-control" required>
+                    <input type="text" name="name" id="name" class="form-control" required maxlength="200">
                 </div>
                 <div class="col">
-                    <input type="email" name="email" id="email" class="form-control" required>
+                    <input type="email" name="email" id="email" class="form-control" required maxlength="100">
                 </div>
                 <div class="col">
-                    <input type="text" name="phone" id="phone" class="form-control" required>
+                    <input type="text" name="phone" id="phone" class="form-control" required maxlength="10">
                 </div>
                 <div class="col">
-                    <input type="password" name="password" id="password" class="form-control" placeholder="optional for update">
+                    <input type="password" name="password" id="password" class="form-control" placeholder="optional for update"  maxlength="15">
                 </div>
                 <div class="col">
                     <select name="role" id="role" class="form-control" required>

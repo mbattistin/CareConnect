@@ -28,61 +28,93 @@ else if($action == 'userLogOut'){
     header("Location: signIn.php");
     exit;
 }
+else if($action== 'addAppointment') {
+    try {
+        addAppointment($conn, $_POST);
+        $_SESSION['success_message'] = "Appointment successfully added.";
+    } catch (Exception $e) {
+        $_SESSION['error_message'] = "Error adding appointment: " . $e->getMessage() . json_encode($_POST);
+    }
+    header("Location: appointments.php");
+    exit();
+}
+else if($action == 'removeAppointment'){
+    removeAppointment($conn, $_POST);
+}
 else {
     
 }
 
 // Function to connect and create DB/table if needed
 function getDatabaseConnection() {
-    // Connect without selecting DB first
+    // Connect to the database
     $conn = new mysqli(DB_HOST, DB_USER, DB_PASS);
     if ($conn->connect_error) {
-        die("Connection failed: " . $conn->connect_error);
+        die("Conection error: " . $conn->connect_error);
     }
 
-    // Create DB if not exists
-    $conn->query("CREATE DATABASE IF NOT EXISTS " . DB_NAME);
+    // Creates the database if not exists
+    if (!$conn->query("CREATE DATABASE IF NOT EXISTS " . DB_NAME)) {
+        die("Error creating the database: " . $conn->error);
+    }
 
-    // Select the database
+    // selects the database
     $conn->select_db(DB_NAME);
 
-    // Create tables if they do not exist
-    $createTableSQL = "CREATE TABLE IF NOT EXISTS users (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    full_name VARCHAR(200) NOT NULL,
-    email VARCHAR(100) NOT NULL UNIQUE,
-    phone_number INT(10),
-    password VARCHAR(255) NOT NULL,
-    role ENUM('admin', 'user', 'doctor') DEFAULT 'user',
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP);
-
-    CREATE TABLE IF NOT EXISTS specialties (
+    // create the users table if not exits
+    $createUsersTable = "CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(100) NOT NULL UNIQUE,
-        description VARCHAR(500) NOT NULL
-    );
+        full_name VARCHAR(200) NOT NULL,
+        email VARCHAR(100) NOT NULL UNIQUE,
+        phone_number INT(10),
+        password VARCHAR(15) NOT NULL,
+        role ENUM('admin', 'user', 'doctor') DEFAULT 'user',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )";
 
-    CREATE TABLE IF NOT EXISTS doctors (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        user_id INT NOT NULL,
-        specialty_id INT NOT NULL,
-        description VARCHAR(500) NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users(id),
-        FOREIGN KEY (specialty_id) REFERENCES specialties(id)
-    );
+    if (!$conn->query($createUsersTable)) {
+        die("Error creating the table users: " . $conn->error);
+    }
 
-    CREATE TABLE IF NOT EXISTS appointments (
+    // create table appointments if not exists
+    $createAppointmentsTable = "CREATE TABLE IF NOT EXISTS appointments (
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
         doctor_id INT NOT NULL,
         appointment_date TIMESTAMP NOT NULL,
         observation VARCHAR(500),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        
         FOREIGN KEY (user_id) REFERENCES users(id),
-        FOREIGN KEY (doctor_id) REFERENCES doctors(id)
+        FOREIGN KEY (doctor_id) REFERENCES users(id)
     )";
-    $conn->query($createTableSQL);
+
+    if (!$conn->query($createAppointmentsTable)) {
+        die("Error creating the table appointments " . $conn->error);
+    }
+
+    // verifies if an admin is already created
+    $adminCheck = $conn->query("SELECT id FROM users WHERE role = 'admin' LIMIT 1");
+
+    if ($adminCheck && $adminCheck->num_rows === 0) {
+        // puts criptography to the users password
+        $adminPassword = password_hash("Pass1234!", PASSWORD_DEFAULT);
+        $name = "Administrator";
+        $email = "admin@careconnect.com";
+        $phone = 1234567890;
+        $password = $adminPassword;
+        $role = "admin";
+
+        // insert the admin in the table
+        $stmt = $conn->prepare("INSERT INTO users (full_name, email, phone_number, password, role) VALUES (?, ?, ?, ?, ?)");
+        //bind the parameters to the connection
+        $stmt->bind_param("ssiss", $name, $email, $phone, $password, $role);
+
+        //executes the sql
+        if (!$stmt->execute()) {
+            die("Error creating the user admin " . $stmt->error);
+        }
+        $stmt->close();
+    }
 
     return $conn;
 }
@@ -144,7 +176,7 @@ function userLogin($conn, $data) {
     }
 }
 
-function getAllUsers() {
+    function getAllUsers() {
     $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 
     if ($conn->connect_error) {
@@ -168,6 +200,43 @@ function getAllUsers() {
     $conn->close();
     return $users;
     }
+
+    function getAppointments($user_id, $user_role) {
+        $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+
+        if ($conn->connect_error) {
+            die("Connection failed: " . $conn->connect_error);
+        }
+
+        $appointments = [];
+
+        $sql = "SELECT a.id, a.appointment_date, a.observation,  d.full_name AS doctor_name,  u.full_name AS user_name 
+                FROM appointments a JOIN users d ON a.doctor_id = d.id JOIN users u ON a.user_id = u.id";
+
+        // Modify query based on role
+        if ($user_role === 'doctor') {
+            $sql .= " WHERE a.doctor_id = ?";
+        } elseif ($user_role === 'user') {
+            $sql .= " WHERE a.user_id = ?";
+        }
+
+        $stmt = $conn->prepare($sql);
+
+        if ($user_role === 'admin') {
+            $stmt->execute();
+        } else {
+            $stmt->bind_param("i", $user_id);
+            $stmt->execute();
+        }
+
+        $result = $stmt->get_result();
+        while ($row = $result->fetch_assoc()) {
+            $appointments[] = $row;
+        }
+
+        $stmt->close();
+        return $appointments;
+    }   
 
     function insertEditUser($conn, $data) {
         $userId = $id = isset($data['user_id']) ? intval($data['user_id']) : 0; 
@@ -198,4 +267,73 @@ function getAllUsers() {
         }
     }
 
+    function getUsersByRole($role){
+        $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+
+        if ($conn->connect_error) {
+            die("Connection failed: " . $conn->connect_error);
+        }
+
+        $users = [];
+
+        $stmt = $conn->prepare("SELECT id, full_name, email, phone_number, role FROM users WHERE role = ? ORDER BY full_name ASC");
+        $stmt->bind_param("s", $role);  // "s" indicates the role is a string
+        $stmt->execute();
+        $result = $stmt->get_result();
+
+        while ($row = $result->fetch_assoc()) {
+            $users[] = $row;
+        }
+
+        $stmt->close();
+        $conn->close(); 
+
+        return $users;
+    }
+
+    function addAppointment($conn,$data) {
+    $user_id = isset($data['user_id']) ? intval($data['user_id']) : $_SESSION['user_id'];
+    $doctor_id = intval($data['doctor_id']);
+    $observation = $conn->real_escape_string($data['observation'] ?? '');
+    $appointment_date = DateTime::createFromFormat('d/m/Y H:i', $data['appointment_date']);
+
+    if (!$appointment_date) {
+        throw new Exception("Invalid date format.");
+    }
+
+    $formatted_date = $appointment_date->format('Y-m-d H:i:s');
+
+    $stmt = $conn->prepare("INSERT INTO appointments (user_id, doctor_id, appointment_date, observation) VALUES (?, ?, ?, ?)");
+    if (!$stmt) {
+        throw new Exception("Prepare failed: " . $conn->error);
+    }
+
+    $stmt->bind_param("iiss", $user_id, $doctor_id, $formatted_date, $observation);
+    if (!$stmt->execute()) {
+        throw new Exception("Execute failed: " . $stmt->error);
+    }
+
+    $stmt->close();
+}
+
+function removeAppointment($conn, $data) {
+    $appointmentId = intval($data['appointment_id']);
+
+    $conn = getDatabaseConnection();
+
+    $stmt = $conn->prepare("DELETE FROM appointments WHERE id = ?");
+    $stmt->bind_param("i", $appointmentId);
+
+    if ($stmt->execute()) {
+        $_SESSION['success_message'] = "Appointment deleted successfully.";
+    } else {
+        $_SESSION['error_message'] = "Failed to delete appointment.";
+    }
+
+    $stmt->close();
+    $conn->close();
+
+    header("Location: appointments.php"); 
+    exit();
+}
 ?>

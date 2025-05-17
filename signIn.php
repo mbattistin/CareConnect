@@ -38,12 +38,12 @@ $currentPage = 'Sign In';
           <?php endif; ?>
           <div class="mb-1">
             <label for="email" class="form-label">Email Address</label>
-            <input type="email" class="form-control" id="email" name="email">
+            <input type="email" class="form-control" id="email" name="email"  maxlength="100">
             <label class="text-danger" id="emailError"></label>
           </div>
           <div class="mb-1">
             <label for="password" class="form-label">Password</label>
-            <input type="password" class="form-control" id="password" name="password">
+            <input type="password" class="form-control" id="password" name="password"  maxlength="150">
             <label class="text-danger" id="passwordError"></label>
           </div>
           <div class="inline-block text-center mb-2">

@@ -35,27 +35,27 @@ $currentPage = 'Register';
             </div>
           <?php endif; ?>
             <label for="name" class="form-label">Full Name</label>
-            <input type="text" class="form-control" id="name" name="name">
+            <input type="text" class="form-control" id="name" name="name"  maxlength="200">
             <label class="text-danger" id="nameError"></label>
           </div>
           <div class="mb-1">
             <label for="email" class="form-label">Email Address</label>
-            <input type="email" class="form-control" id="email" name="email">
+            <input type="email" class="form-control" id="email" name="email"  maxlength="100">
             <label class="text-danger" id="emailError"></label>
           </div>
           <div class="mb-1">
             <label for="phone" class="form-label">Phone Number</label>
-            <input type="tel" class="form-control" id="phone" name="phone">
+            <input type="tel" class="form-control" id="phone" name="phone"  maxlength="10">
             <label class="text-danger" id="phoneError"></label>
           </div>
           <div class="mb-1">
             <label for="password" class="form-label">Password</label>
-            <input type="password" class="form-control" id="password" name="password">
+            <input type="password" class="form-control" id="password" name="password"  maxlength="15">
             <label class="text-danger" id="passwordError"></label>
           </div>
           <div class="mb-1">
             <label for="confirmPassword" class="form-label">Confirm Password</label>
-            <input type="password" class="form-control" id="confirmPassword" name="confirmPassword">
+            <input type="password" class="form-control" id="confirmPassword" name="confirmPassword"  maxlength="15">
             <label class="text-danger" id="confirmPasswordError"></label>
           </div>
           <div class="row">
