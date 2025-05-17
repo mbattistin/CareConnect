@@ -44,5 +44,13 @@ function validateForm(event) {
         // it sets the label error to empty if there is no error
         passwordError.textContent = "";
     }
+    //it validates the captcha marked
+    let captchaError = document.getElementById("captchaError");
+    var response = grecaptcha.getResponse();
+    if (response.length === 0) {
+        captchaError.textContent = "*Please verify that you're not a robot.";
+        isValid = false;
+    }
 
+    return isValid;
 }

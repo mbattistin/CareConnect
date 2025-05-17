@@ -1,10 +1,7 @@
 <?php
-// index.php
 
-// Start session if you plan to handle user roles later
 session_start();
 
-// You can set a variable here to highlight the current page in your nav
 $currentPage = 'Sign In';
 
 ?>
@@ -17,6 +14,7 @@ $currentPage = 'Sign In';
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="scripts/login-form-validation.js" defer></script>
+    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
   </head>
   <body>
     <!-- navbar section -->
@@ -27,7 +25,7 @@ $currentPage = 'Sign In';
           <h5 class="mb-0">Sign In</h5>
         </div>
         <form class="card-body" id="loginForm"  name="loginForm"  method="POST" action="databaseConnection.php?action=userLogin"
-        onsubmit="return validateForm(event)">
+          onsubmit="return validateForm(event)">
           <?php if (isset($_GET['registration_success_message'])): ?>
             <div class='alert alert-success'>Registration successful. Please log in.</div>
           <?php endif; ?>
@@ -37,14 +35,19 @@ $currentPage = 'Sign In';
             </div>
           <?php endif; ?>
           <div class="mb-1">
-            <label for="email" class="form-label">Email Address</label>
+            <label for="email" class="form-label">Email Address:</label>
             <input type="email" class="form-control" id="email" name="email"  maxlength="100">
             <label class="text-danger" id="emailError"></label>
           </div>
           <div class="mb-1">
-            <label for="password" class="form-label">Password</label>
-            <input type="password" class="form-control" id="password" name="password"  maxlength="150">
+            <label for="password" class="form-label">Password:</label>
+            <input type="password" class="form-control" id="password" name="password"  maxlength="15">
             <label class="text-danger" id="passwordError"></label>
+          </div>
+          <div class="mb-1">
+            <!-- I used the captcha from google based on their documentation: https://cloud.google.com/security/products/recaptcha -->
+            <div class="g-recaptcha" data-sitekey="6LeNdT4rAAAAAGk9hEHmpny5DeUYFdiiwA2RU_0j"></div>
+            <label class="text-danger" id="captchaError"></label> 
           </div>
           <div class="inline-block text-center mb-2">
             Don’t have an account? <a href="register.php">Register here</a>.
