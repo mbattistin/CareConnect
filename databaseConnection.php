@@ -84,6 +84,7 @@ function getDatabaseConnection() {
         appointment_date TIMESTAMP NOT NULL,
         observation VARCHAR(500),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_doctor_date (doctor_id, appointment_date),
         FOREIGN KEY (user_id) REFERENCES users(id),
         FOREIGN KEY (doctor_id) REFERENCES users(id)
     )";

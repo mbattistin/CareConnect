@@ -1,4 +1,5 @@
 function validateForm(event) {
+    isValid = true;
     //email validation 
     //it gets the input from the html with the id email. Trim is to remove any additional space
     let email = document.getElementById("email").value.trim();
