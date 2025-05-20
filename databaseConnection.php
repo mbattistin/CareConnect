@@ -33,7 +33,11 @@ else if($action== 'addAppointment') {
         addAppointment($conn, $_POST);
         $_SESSION['success_message'] = "Appointment successfully added.";
     } catch (Exception $e) {
-        $_SESSION['error_message'] = "Error adding appointment: " . $e->getMessage() . json_encode($_POST);
+            if (strpos($e->getMessage(), 'Duplicate entry') !== false) {
+                $_SESSION['error_message'] = "The selected doctor already has an appointment scheduled for this date and time.";
+            } else {
+                $_SESSION['error_message'] = "Error adding appointment, please try again later.";
+            }
     }
     header("Location: appointments.php");
     exit();
@@ -212,7 +216,7 @@ function userLogin($conn, $data) {
         $appointments = [];
 
         $sql = "SELECT a.id, a.appointment_date, a.observation,  d.full_name AS doctor_name,  u.full_name AS user_name 
-                FROM appointments a JOIN users d ON a.doctor_id = d.id JOIN users u ON a.user_id = u.id";
+                FROM appointments a JOIN users d ON a.doctor_id = d.id JOIN users u ON a.user_id = u.id order by a.appointment_date";
 
         // Modify query based on role
         if ($user_role === 'doctor') {
