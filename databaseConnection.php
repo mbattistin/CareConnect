@@ -13,39 +13,34 @@ $action = $_GET['action'] ?? '';
 
 $conn = getDatabaseConnection();
 
-if ($action == 'insertUserFromRegisterForm') {
+//switch case to check with action was called
+switch ($action) {
+  case 'insertUserFromRegisterForm':
     insertUserFromRegisterForm($conn, $_POST);
-}
-else if($action == 'userLogin'){
+    break;
+  case 'userLogin':
     userLogin($conn, $_POST);
-}
-else if($action == 'insertEditUser'){
+    break;
+  case 'insertEditUser':
     insertEditUser($conn, $_POST);
-}
-else if($action == 'userLogOut'){
+    break;
+  case 'userLogOut':
+    
+    //free all the sets variables
     session_unset();
+    //removes all session data
     session_destroy();
+    //goes back to the sign in page
     header("Location: signIn.php");
     exit;
-}
-else if($action== 'addAppointment') {
-    try {
-        addAppointment($conn, $_POST);
-        $_SESSION['success_message'] = "Appointment successfully added.";
-    } catch (Exception $e) {
-            if (strpos($e->getMessage(), 'Duplicate entry') !== false) {
-                $_SESSION['error_message'] = "The selected doctor already has an appointment scheduled for this date and time.";
-            } else {
-                $_SESSION['error_message'] = "Error adding appointment, please try again later.";
-            }
-    }
-    header("Location: appointments.php");
-    exit();
-}
-else if($action == 'removeAppointment'){
+    break; 
+  case 'addAppointment':
+    addAppointment($conn, $_POST);
+    break;
+  case 'removeAppointment':
     removeAppointment($conn, $_POST);
-}
-else {
+    break;
+  default:
     
 }
 
@@ -120,27 +115,30 @@ function getDatabaseConnection() {
         }
         $stmt->close();
     }
-
+    //return the connection
     return $conn;
 }
 
 // Insert user
 function insertUserFromRegisterForm($conn, $data) {
+    //gets all the variables
     $name = $conn->real_escape_string($data['name']);
     $email = $conn->real_escape_string($data['email']);
     $phone = $conn->real_escape_string($data['phone']);
     $password = password_hash($data['password'], PASSWORD_DEFAULT);
 
+    //builds sql command to insert
     $sql = "INSERT INTO users (full_name, email, phone_number, password)
             VALUES ('$name', '$email', '$phone', '$password')";
 
+    //if successful goes to sig in page with a success message
     if ($conn->query($sql)) {
         header("Location: signIn.php?registration_success_message");
         exit();
     } else {
-        
-        // after error registration
+        // if an error registration happen stores a message in the session
         $_SESSION['registration_error_message'] = "Something went wrong during registration. Please try again later.";
+        //return to registration page
         header("Location: register.php");
         exit();    
     }
@@ -148,196 +146,272 @@ function insertUserFromRegisterForm($conn, $data) {
 
 //login
 function userLogin($conn, $data) {
+    //gets all the variables
     $email = $conn->real_escape_string($data['email']);
-    $password = $data['password']; // use raw password input
+    $password = $data['password']; 
     
     // Check if user exists in the database
+    //create select command
     $sql = "SELECT * FROM users WHERE email = ?";
+    //prepares the command
     $stmt = $conn->prepare($sql);
+    //binds the parameter
     $stmt->bind_param("s", $email);
+    //executes the command
     $stmt->execute();
+    //gets result
     $result = $stmt->get_result();
     
     // If user found, verify password
     if ($result->num_rows === 1) {
       $user = $result->fetch_assoc();
-    
+      //verifies if passaword match
       if (password_verify($password, $user['password'])) {
+        //stores user information in the session variables 
         $_SESSION['username'] = $user['full_name'];
         $_SESSION['role'] = $user['role'];
         $_SESSION['user_id'] = $user['id'];
-    
+        //redirects to the index
         header("Location: index.php");
         exit;
       } else {
+        //stores error message
         $_SESSION['login_error_message'] = "Invalid credentials. Please try again.";
+        //returns to sign in page
         header("Location: signIn.php");
         exit(); 
       }
     } else {
+        //stores error message
         $_SESSION['login_error_message'] = "User not found. Please register before attempting to log in.";
+        //returns to sign in page
         header("Location: signIn.php");
         exit(); 
     }
 }
 
-    function getAllUsers() {
+function getAllUsers() {
+    //creates database connection
     $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
 
+    //checks if connection worked
     if ($conn->connect_error) {
         die("Connection failed: " . $conn->connect_error);
     }
 
     $users = [];
+    //creates select command
     $stmt = $conn->prepare("SELECT id, full_name, email, phone_number, role FROM users ORDER BY full_name ASC");
 
     if ($stmt) {
+        //executes command 
         $stmt->execute();
+        //receives the result
         $result = $stmt->get_result();
-
+        //populates the array with the result
         while ($row = $result->fetch_assoc()) {
             $users[] = $row;
         }
-
+        //close connection
         $stmt->close();
     }
-
+    //close connection with the database
     $conn->close();
+    //return users
     return $users;
+}
+
+function getAppointments($user_id, $user_role) {
+    //creates database connection
+    $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+    //checks if connection worked
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
     }
 
-    function getAppointments($user_id, $user_role) {
-        $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+    $appointments = [];
+    //creates the select command
+    $sql = "SELECT a.id, a.appointment_date, a.observation,  d.full_name AS doctor_name,  u.full_name AS user_name 
+            FROM appointments a JOIN users d ON a.doctor_id = d.id JOIN users u ON a.user_id = u.id";
 
-        if ($conn->connect_error) {
-            die("Connection failed: " . $conn->connect_error);
-        }
+    // Modify command based on role
+    if ($user_role === 'doctor') {
+        $sql .= " WHERE a.doctor_id = ?";
+    } elseif ($user_role === 'user') {
+        $sql .= " WHERE a.user_id = ?";
+    }
+    //adds the order by to the query
+    $sql = $sql . " ORDER BY a.appointment_date";
+    //prepares the command
+    $stmt = $conn->prepare($sql);
 
-        $appointments = [];
+    //if its not admin, bind the user id parameter
+    if ($user_role !== 'admin') {
+        $stmt->bind_param("i", $user_id);
+    }
+    //executes query
+    $stmt->execute();
+    //gets result
+    $result = $stmt->get_result();
+    //populates the array
+    while ($row = $result->fetch_assoc()) {
+        $appointments[] = $row;
+    }
+    //close connection
+    $stmt->close();
 
-        $sql = "SELECT a.id, a.appointment_date, a.observation,  d.full_name AS doctor_name,  u.full_name AS user_name 
-                FROM appointments a JOIN users d ON a.doctor_id = d.id JOIN users u ON a.user_id = u.id order by a.appointment_date";
+    //return appointments
+    return $appointments;
+}   
 
-        // Modify query based on role
-        if ($user_role === 'doctor') {
-            $sql .= " WHERE a.doctor_id = ?";
-        } elseif ($user_role === 'user') {
-            $sql .= " WHERE a.user_id = ?";
-        }
+function insertEditUser($conn, $data) {
+    //gets all variables
+    $id = isset($data['user_id']) ? intval($data['user_id']) : 0; 
+    $name = trim($data['name']);
+    $email = trim($data['email']);
+    $phone = trim($data['phone']);
+    $password = isset($data['password']) ? trim($data['password']) : '';
+    $role = trim($data['role']);
 
-        $stmt = $conn->prepare($sql);
-
-        if ($user_role === 'admin') {
-            $stmt->execute();
-        } else {
-            $stmt->bind_param("i", $user_id);
-            $stmt->execute();
-        }
-
-        $result = $stmt->get_result();
-        while ($row = $result->fetch_assoc()) {
-            $appointments[] = $row;
-        }
-
-        $stmt->close();
-        return $appointments;
-    }   
-
-    function insertEditUser($conn, $data) {
-        $userId = $id = isset($data['user_id']) ? intval($data['user_id']) : 0; 
-        $name = $conn->real_escape_string($data['name']);
-        $email = $conn->real_escape_string($data['email']);
-        $phone = $conn->real_escape_string($data['phone']);
-        $password = password_hash($data['password'], PASSWORD_DEFAULT);
-        $role = $conn->real_escape_string($data['role']);
-
+    try {
+        // update existent user
         if ($id > 0) {
-            // Update existing user
-            $sql = "UPDATE users SET full_name='$name', email='$email', phone_number='$phone', role='$role'";
+            //checks if password was changed
             if (!empty($password)) {
-                $sql .= ", password='$password'";
+                //encripts password
+                $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+                //creates update query
+                $stmt = $conn->prepare("UPDATE users SET full_name=?, email=?, phone_number=?, password=?, role=? WHERE id=?");
+                //bind parameters
+                $stmt->bind_param("sssssi", $name, $email, $phone, $hashedPassword, $role, $id);
+            } else {
+                //creates update query
+                $stmt = $conn->prepare("UPDATE users SET full_name=?, email=?, phone_number=?, role=? WHERE id=?");
+                //binds parameters
+                $stmt->bind_param("ssssi", $name, $email, $phone, $role, $id);
             }
-            $sql .= " WHERE id=$id";
         } else {
-            // Create new user
-            $sql = "INSERT INTO users (full_name, email, phone_number, password, role)
-                    VALUES ('$name', '$email', '$phone', '$password', '$role')";
+            //  exception if the password is empty for new user
+            if (empty($password)) {
+                //stores error message
+                $_SESSION['error_message'] ="Password is required to create a new user.";
+            }
+            //encripts password
+            $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
+            //creates insert connection
+            $stmt = $conn->prepare("INSERT INTO users (full_name, email, phone_number, password, role) VALUES (?, ?, ?, ?, ?)");
+            //binds parameters
+            $stmt->bind_param("sssss", $name, $email, $phone, $hashedPassword, $role);
         }
 
-        if ($conn->query($sql)) {
-            header("Location: usersManagement.php?success=1");
-            exit();
-        } else {
-            echo "Error: " . $conn->error;
+        if (!$stmt->execute()) {
+            // it get if the error is duplicate key
+            if ($conn->errno == 1062) {
+                $_SESSION['error_message'] = "A user with this email already exists.";
+            } else {
+                //stores error message
+                $_SESSION['error_message'] ="An error happened when adding the user.";
+            }  
         }
-    }
-
-    function getUsersByRole($role){
-        $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-
-        if ($conn->connect_error) {
-            die("Connection failed: " . $conn->connect_error);
+        else{
+            //stores success message
+            $_SESSION['success_message'] ="User successfully saved.";
         }
-
-        $users = [];
-
-        $stmt = $conn->prepare("SELECT id, full_name, email, phone_number, role FROM users WHERE role = ? ORDER BY full_name ASC");
-        $stmt->bind_param("s", $role);  // "s" indicates the role is a string
-        $stmt->execute();
-        $result = $stmt->get_result();
-
-        while ($row = $result->fetch_assoc()) {
-            $users[] = $row;
-        }
-
+        //closes connection
         $stmt->close();
-        $conn->close(); 
 
-        return $users;
+    } catch (Exception $e) {
+        //stores error message if exception happen
+        $_SESSION['error_message'] ="An error happened when adding the user.";
+    }
+    //redirects to user management page
+    header("Location: usersManagement.php"); 
+    exit();
+}
+
+function getUsersByRole($role){
+    //creates database connection
+    $conn = new mysqli(DB_HOST, DB_USER, DB_PASS, DB_NAME);
+    //checks if connection has error
+    if ($conn->connect_error) {
+        die("Connection failed: " . $conn->connect_error);
     }
 
-    function addAppointment($conn,$data) {
+    $users = [];
+    //creates select command
+    $stmt = $conn->prepare("SELECT id, full_name, email, phone_number, role FROM users WHERE role = ? ORDER BY full_name ASC");
+    //binds parameter
+    $stmt->bind_param("s", $role); 
+    //executes command 
+    $stmt->execute();
+    //gets resutl
+    $result = $stmt->get_result();
+    //stores result in array
+    while ($row = $result->fetch_assoc()) {
+        $users[] = $row;
+    }
+    //close connection
+    $stmt->close();
+    $conn->close(); 
+    //return users
+    return $users;
+}
+
+function addAppointment($conn,$data) {
+    //gets variables
     $user_id = isset($data['user_id']) ? intval($data['user_id']) : $_SESSION['user_id'];
     $doctor_id = intval($data['doctor_id']);
     $observation = $conn->real_escape_string($data['observation'] ?? '');
     $appointment_date = DateTime::createFromFormat('d/m/Y H:i', $data['appointment_date']);
-
+    //verifies if the data format is valid
     if (!$appointment_date) {
-        throw new Exception("Invalid date format.");
+        //stores error message
+        $_SESSION['error_message'] ="Invalid date format.";
     }
-
+    //formats date
     $formatted_date = $appointment_date->format('Y-m-d H:i:s');
-
+    //creates insert command
     $stmt = $conn->prepare("INSERT INTO appointments (user_id, doctor_id, appointment_date, observation) VALUES (?, ?, ?, ?)");
-    if (!$stmt) {
-        throw new Exception("Prepare failed: " . $conn->error);
-    }
-
+    //binds parameters
     $stmt->bind_param("iiss", $user_id, $doctor_id, $formatted_date, $observation);
-    if (!$stmt->execute()) {
-        throw new Exception("Execute failed: " . $stmt->error);
-    }
-
+        if (!$stmt->execute()) {
+            // it get if the error is duplicate key
+            if ($conn->errno == 1062) {
+                $_SESSION['error_message'] = "An appointment with the same time and doctor already exists.";
+            }else {
+                //stores insertion error
+                $_SESSION['error_message'] = "An error happened when adding the appointment.";
+            }
+        }else{
+            //stores success message
+            $_SESSION['success_message'] ="Appointment successfully added.";
+        }
+    //closes connection
     $stmt->close();
+
+    //redirects to appointment page
+    header("Location: appointments.php"); 
+    exit();
 }
 
 function removeAppointment($conn, $data) {
+    //gets variable
     $appointmentId = intval($data['appointment_id']);
-
-    $conn = getDatabaseConnection();
-
+    //Creates delete command
     $stmt = $conn->prepare("DELETE FROM appointments WHERE id = ?");
+    //binds the parameter
     $stmt->bind_param("i", $appointmentId);
-
+    //executes query
     if ($stmt->execute()) {
+        //stores success message
         $_SESSION['success_message'] = "Appointment deleted successfully.";
     } else {
-        $_SESSION['error_message'] = "Failed to delete appointment.";
+        //stores error message
+        $_SESSION['error_message'] = "An error happened when deleting the appointment.";
     }
-
+    //close connection
     $stmt->close();
-    $conn->close();
-
+    //redirects to appointment page
     header("Location: appointments.php"); 
     exit();
 }

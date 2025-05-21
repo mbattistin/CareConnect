@@ -121,7 +121,6 @@ function validateForm(event) {
 
     // If everything is valid, show a success message 
     if (isValid) {
-        alert("Your message has been submitted successfully!");
         //it allows form for submission
         return true;
     }

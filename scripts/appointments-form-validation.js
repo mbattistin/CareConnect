@@ -1,4 +1,5 @@
 function clearFields(){
+    //it sets the form inputs as null
     document.getElementById('doctor_id').value = "";
     document.getElementById('user_id').value = "";
     document.getElementById('appointment_date').value = null;
@@ -19,10 +20,6 @@ function validateForm(event) {
         //it makes the variable false because the input is not correct
         isValid = false;
     } 
-    else {
-        //it removes the error style to the input.
-        document.getElementById("doctor_id").classList.remove('is-invalid');
-    }
 
     //it gets the input from the html with the id. Trim is to remove any additional space
     let userId = document.getElementById("user_id").value.trim();
@@ -34,10 +31,6 @@ function validateForm(event) {
         //it makes the variable false because the input is not correct
         isValid = false;
     } 
-    else {
-        //it removes the error style to the input.
-        document.getElementById("user_id").classList.remove('is-invalid');
-    }
 
         //it gets the input from the html with the id. Trim is to remove any additional space
     let dateTime = document.getElementById("appointment_date").value.trim();
@@ -49,10 +42,6 @@ function validateForm(event) {
         //it makes the variable false because the input is not correct
         isValid = false;
     } 
-    else {
-        //it removes the error style to the input.
-        document.getElementById("appointment_date").classList.remove('is-invalid');
-    }
 
     return isValid;
 
